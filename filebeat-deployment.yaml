@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.12.0 (0ab07be)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: filebeat
+  name: filebeat
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: filebeat
+    spec:
+      containers:
+      - env:
+        - name: LOGSTASH_HOST
+          value: elk
+        - name: LOGSTASH_PORT
+          value: "5044"
+        - name: SHIPPER_NAME
+          value: filebeat
+        image: bargenson/filebeat:latest
+        name: filebeat
+        resources: {}
+      restartPolicy: Always
+status: {}

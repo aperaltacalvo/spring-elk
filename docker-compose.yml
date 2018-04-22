@@ -1,0 +1,79 @@
+version: '2'
+
+services:
+  elk:
+    build:
+      context: ./
+      dockerfile: DockerLogstash
+    networks:
+      - kafkanet
+    ports:
+      - "5601:5601"
+      - "9200:9200"
+      - "5044:5044"
+  webservice:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: spring-docker
+    networks:
+      - kafkanet
+    ports:
+      - "8082:8080"
+    links:
+      - "elk"
+  kafkaserver:
+    image: "spotify/kafka:latest"
+    container_name: kafka
+    hostname: kafkaserver
+    networks:
+      - kafkanet
+    ports:
+      - 2181:2181
+      - 9092:9092
+    links:
+      - "elk"
+      - "webservice"
+    environment:
+      ADVERTISED_HOST: kafkaserver
+      ADVERTISED_PORT: 9092
+      JMX_PORT: "55555"
+  kafka_manager:
+    image: "mzagar/kafka-manager-docker:1.3.3.4"
+    container_name: kafkamanager
+    networks:
+      - kafkanet
+    ports:
+      - 9000:9000
+    links:
+      - kafkaserver
+      - "elk"
+      - "webservice"
+    environment:
+      ZK_HOSTS: "kafkaserver:2181"
+      JMX_PORT: "55555"
+  jobmanager:
+      image: flink:alpine
+      expose:
+        - "6123"
+      ports:
+        - "8081:8081"
+      command: jobmanager
+      environment:
+        - JOB_MANAGER_RPC_ADDRESS=jobmanager
+
+  taskmanager:
+      image: flink:alpine
+      expose:
+        - "6121"
+        - "6122"
+      depends_on:
+        - jobmanager
+      command: taskmanager
+      links:
+        - "jobmanager:jobmanager"
+      environment:
+        - JOB_MANAGER_RPC_ADDRESS=jobmanager
+networks:
+  kafkanet:
+    driver: bridge
