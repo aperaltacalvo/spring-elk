@@ -1,0 +1,32 @@
+version: '2'
+
+services:
+  elk:
+    build:
+      context: ./
+      dockerfile: DockerLogstash
+    ports:
+      - "5601:5601"
+      - "9200:9200"
+      - "5044:5044"
+  filebeat:
+      image: bargenson/filebeat:latest
+      restart: unless-stopped
+      volumes:
+       - /var/run/docker.sock:/tmp/docker.sock
+      environment:
+       - LOGSTASH_HOST=elk
+       - LOGSTASH_PORT=5044
+       - SHIPPER_NAME=filebeat
+      links:
+        - "elk"
+        - "webservice"
+  webservice:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: spring-docker
+    ports:
+      - "8080:8080"
+    links:
+      - "elk"
